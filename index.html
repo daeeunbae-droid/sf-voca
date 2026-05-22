@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SF English 단어 테스트 v22</title>
+<title>SF English 단어 테스트 v23</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100vh;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#f5f7fa;color:#1e293b;-webkit-tap-highlight-color:transparent}
@@ -234,9 +234,13 @@ const RL={"21년 3월 모의 22-23번": {"22-23번": [["self-worth", "자아 존
     "38번": [["overestimate","과대평가하다"],["underestimate","과소평가하다"],["massive","거대한"],["earthshaking","지축을 흔드는"],["championship","결승전, 선수권 대회"],["notable","눈에 띄는"],["meaningful","의미 있는"],["conversely","역으로, 반대로"],["decline","떨어지다, 감소하다"],["add up to","쌓여서 ~이 되다"]],
     "39번": [["survival","생존"],["adapt","적응하다"],["ancient","고대의"],["gap","간극, 격차"],["wilderness","황야, 미지의 땅"],["inhabitant","주민"],["gear","장비"],["crucial","중요한, 결정적인"],["arise","발생하다"],["a series of","일련의"]],
     "40번": [["stranger","모르는 사람, 낯선 사람"],["participant","참가자"],["empathy","공감"],["presence","존재, 있음"],["connection","관계, 연결"],["unchecked","확인하지 않은"],["weaken","약화시키다"],["involved in","~에 참여하는"]]
-  }};
+  },
+  "Nexus (2026 1학기 기말)": {
+    "본문 어휘": [["nexus","연결, 결합"],["connection","연결, 관계"],["across time","시간에 걸쳐"],["society","사회"],["stay connected","연결을 유지하다"],["storytelling","이야기하기"],["belief","신념, 믿음"],["value","가치(관)"],["completely","완전히"],["powerful","강력한"],["religion","종교"],["nation","국가"],["exist","존재하다"],["agree","동의/합의하다"],["organize","정리/조직하다"],["knowledge","지식"],["pass down","전수하다"],["printing","인쇄(술)"],["spread","퍼뜨리다"],["increase","증가시키다"],["control","통제하다"],["play a key role","중요한 역할을 하다"],["instantly","즉시"],["global","세계적인"],["network","관계망"],["dangerous","위험한"],["false","거짓의"],["correct","옳은"],["influence","영향을 미치다"],["thought","생각, 사고"],["government","정부"],["shape","형성하다"],["opinion","여론, 의견"],["lead to","~을 초래하다"],["bias","편견"],["misunderstanding","오해"],["conflict","갈등"],["rational","이성적인"],["fit","맞다, 부합하다"],["existing","기존의"],["strengthen","강화하다"],["division","분열"],["be built on","~에 기반하다"],["advanced","첨단의"],["technology","기술"],["remind","상기시키다"],["carefully","신중하게"],["receive","받다"],["individual","개인"]]
+  }
+};
 
-let S={sc:'login',st:'',b1:null,ps1:[],b2:null,ps2:[],numQ:20,strictMode:false,mode:'test',qs:[],ci:0,res:[],disputed:[],sqs:[],sRes:{cor:0,wrg:0},adminStudent:null,fbRecordKey:null,fbStudentKey:null,resultListener:null,adminListener:null,sampleRate:0.6,adminStsCache:{}};
+let S={sc:'login',st:'',b1:null,ps1:[],b2:null,ps2:[],numQ:20,strictMode:false,mode:'test',qs:[],ci:0,res:[],disputed:[],sqs:[],sRes:{cor:0,wrg:0},adminStudent:null,fbRecordKey:null,fbStudentKey:null,resultListener:null,adminListener:null,sampleRate:0.6,adminStsCache:{},progressKey:null,resumeData:null};
 
 function sh(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
 function norm(s){return s.replace(/\s/g,'').replace(/[~·\-]/g,'').toLowerCase()}
@@ -277,6 +281,7 @@ function mkq(w1,w2,total){
 function R(){const a=document.getElementById('app');
   if(S.sc==='login')rLogin(a);
   else if(S.sc==='select')rSelect(a);
+  else if(S.sc==='resume')rResume(a);
   else if(S.sc==='study')rStudy(a);
   else if(S.sc==='studyEnd')rStudyEnd(a);
   else if(S.sc==='test')rTest(a);
@@ -571,19 +576,20 @@ function goTestFromStudy(){
     ...spPool.map((w,i)=>({en:w[0],ko:w[1],tp:'spell',id:i})),
     ...meanPool.map((w,i)=>({en:w[0],ko:w[1],tp:'mean',id:spPool.length+i}))
   ]);
+  S.progressKey=makeProgressKey();
   S.ci=0;S.res=[];S.disputed=[];S.sc='test';R();
 }
 
-function doStart(){
+// 출제 로직 (소스에서 문항 배열 생성)
+function buildTestQs(){
   const w1=S.b1?gwM(S.b1,S.ps1):[];const w2=S.b2?gwM(S.b2,S.ps2):[];
-  if(!w1.length&&!w2.length)return;
-  S.strictMode=document.getElementById('strictCk').checked;
+  if(!w1.length&&!w2.length)return null;
   // 각 소스에서 출제 비율만큼 선택
   const r=S.sampleRate;
   const sel1=sh(w1).slice(0,Math.round(w1.length*r));
   const sel2=sh(w2).slice(0,Math.round(w2.length*r));
   const all=sh([...sel1,...sel2]);
-  const total=all.length;if(!total)return;
+  const total=all.length;if(!total)return null;
   // 유형 배분: 스펠링 10%, 뜻쓰기 90% (그 중 다의어 30%)
   const spCount=Math.max(1,Math.round(total*0.1));
   const meanCount=total-spCount;
@@ -599,11 +605,98 @@ function doStart(){
   const usedSet=new Set(meanPool.map(w=>w[0]));
   const spPool=sh(all.filter(w=>!usedSet.has(w[0]))).slice(0,spCount);
   // 최종 문항 합치기 (섞기)
-  const qs=sh([
+  return sh([
     ...spPool.map((w,i)=>({en:w[0],ko:w[1],tp:'spell',id:i})),
     ...meanPool.map((w,i)=>({en:w[0],ko:w[1],tp:'mean',id:spPool.length+i}))
   ]);
+}
+
+// 진행 기록 식별 키 (학생 + 선택 소스 조합)
+function makeProgressKey(){
+  const p1=S.b1&&S.ps1.length?S.b1+'|'+[...S.ps1].sort().join(','):'';
+  const p2=S.b2&&S.ps2.length?S.b2+'|'+[...S.ps2].sort().join(','):'';
+  return sKey((p1+'__'+p2)||'test');
+}
+
+function doStart(){
+  const w1=S.b1?gwM(S.b1,S.ps1):[];const w2=S.b2?gwM(S.b2,S.ps2):[];
+  if(!w1.length&&!w2.length)return;
+  S.strictMode=document.getElementById('strictCk').checked;
+  S.progressKey=makeProgressKey();
+  // 미완료 진행 기록 확인 → 있으면 이어하기 화면
+  checkResume();
+}
+
+// Firebase에서 미완료 진행 기록 확인
+function checkResume(){
+  if(!DB){beginTest();return;}
+  const sk=sKey(S.st);
+  let handled=false;
+  const to=setTimeout(()=>{if(!handled){handled=true;beginTest();}},5000);
+  DB.ref('voca_progress/'+sk+'/'+S.progressKey).once('value',snap=>{
+    if(handled)return;handled=true;clearTimeout(to);
+    const v=snap.val();
+    if(v&&Array.isArray(v.qs)&&v.qs.length&&v.ci>0&&v.ci<v.qs.length){
+      S.resumeData=v;S.sc='resume';R();
+    }else{beginTest();}
+  },()=>{if(!handled){handled=true;clearTimeout(to);beginTest();}});
+}
+
+// 새 테스트 시작 (출제 후 진행화면 진입)
+function beginTest(){
+  const qs=buildTestQs();
+  if(!qs){S.sc='select';R();return;}
   S.qs=qs;S.ci=0;S.res=[];S.disputed=[];S.sc='test';R();
+}
+
+// 이어서 하기 화면
+function rResume(a){
+  const v=S.resumeData;
+  const done=v.ci, total=v.qs.length;
+  const d=v.date?new Date(v.date):null;
+  const dateStr=d?`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`:'';
+  a.innerHTML=`<div class="card" style="text-align:center">
+    <div class="em">⏸️</div>
+    <div style="font-size:18px;font-weight:800;color:#1B3A5C;margin-bottom:8px">이어서 하시겠어요?</div>
+    <div style="font-size:13px;color:#555;line-height:1.7;background:#f1f5f9;border-radius:10px;padding:12px;margin-bottom:6px">
+      ${S.st}님, 지난번에 <strong style="color:#1B3A5C">${total}문제 중 ${done}문제</strong>까지 풀었어요.${dateStr?`<br><span style="font-size:11px;color:#888">(${dateStr})</span>`:''}
+    </div>
+  </div>
+  <button class="btn bn mt8" onclick="resumeTest()">▶️ 이어서 하기 (${done+1}번부터)</button>
+  <button class="btn bo mt8" onclick="freshTest()">🔄 처음부터 다시</button>
+  <button class="btn bGray mt8" style="font-size:13px" onclick="S.sc='select';R()">← 다시 선택</button>`;
+}
+function resumeTest(){
+  const v=S.resumeData;
+  S.qs=v.qs;S.ci=v.ci;S.res=v.res||[];
+  S.disputed=(v.res||[]).map((r,i)=>r&&r.disputed?i:-1).filter(i=>i>=0);
+  if(typeof v.strictMode==='boolean')S.strictMode=v.strictMode;
+  S.resumeData=null;S.sc='test';R();
+}
+function freshTest(){
+  S.resumeData=null;
+  // 기존 진행 기록 삭제 후 새로 시작
+  if(DB&&S.progressKey)try{DB.ref('voca_progress/'+sKey(S.st)+'/'+S.progressKey).remove();}catch(e){}
+  beginTest();
+}
+
+// 매 문제 후 진행 상황 Firebase 저장
+function saveProgress(){
+  if(!DB||!S.progressKey)return;
+  if(S.ci>=S.qs.length)return; // 완료된 경우 저장 안 함
+  try{
+    DB.ref('voca_progress/'+sKey(S.st)+'/'+S.progressKey).set({
+      s:S.st, qs:S.qs, ci:S.ci, res:S.res, strictMode:S.strictMode,
+      total:S.qs.length, date:new Date().toISOString(),
+      label:(S.b1&&S.ps1.length?S.b1+' '+S.ps1.join(','):'')+(S.b2&&S.ps2.length?' '+S.b2+' '+S.ps2.join(','):'')
+    });
+  }catch(e){console.warn('progress save fail',e);}
+}
+
+// 진행 기록 삭제 (테스트 완료 시)
+function clearProgress(){
+  if(!DB||!S.progressKey)return;
+  try{DB.ref('voca_progress/'+sKey(S.st)+'/'+S.progressKey).remove();}catch(e){}
 }
 
 function rTest(a){
@@ -635,7 +728,7 @@ function sa(){
   else{fa.innerHTML=`<div class="fdb no">❌ 오답 — 정답: ${ca}</div><button class="btn bGray mt8" style="font-size:13px" onclick="disp(${S.res.length-1})">내 답도 맞아요</button>`;S.nxTimer=setTimeout(nx,2500)}
 }
 function disp(idx){clearTimeout(S.nxTimer);S.disputed.push(idx);S.res[idx].disputed=true;document.getElementById('fa').innerHTML='<div class="fdb" style="background:#fffbeb;color:#92400e;border:2px solid #fcd34d">📋 검토 대기</div>';S.nxTimer=setTimeout(nx,2500)}
-function nx(){if(S.ci+1<S.qs.length){S.ci++;R()}else{S.sc='result';R()}}
+function nx(){if(S.ci+1<S.qs.length){S.ci++;saveProgress();R()}else{S.ci=S.qs.length;S.sc='result';R()}}
 
 function exitStudy(){
   if(S.ci===0 || confirm(S.ci+'문제 진행 중입니다. 정말 나가시겠어요?\n(진행한 결과는 저장되지 않습니다)')){
@@ -645,8 +738,9 @@ function exitStudy(){
   }
 }
 function exitTest(){
-  if(S.ci===0 || confirm(S.ci+'문제 진행 중입니다. 정말 나가시겠어요?\n(진행한 결과는 저장되지 않습니다)')){
+  if(S.ci===0 || confirm(S.ci+'문제까지 진행했습니다. 나가시겠어요?\n(진행 상황이 저장되어 다음에 이어서 할 수 있습니다)')){
     clearTimeout(S.nxTimer);
+    saveProgress();
     S.sc='select';S.qs=[];S.ci=0;S.res=[];S.disputed=[];
     R();
   }
@@ -706,6 +800,8 @@ function sv(st,res){
   const newRef=DB.ref('results/'+sk).push(record);
   S.fbRecordKey=newRef.key;
   S.fbStudentKey=sk;
+  // 테스트 완료 → 진행 임시저장 제거
+  clearProgress();
   // push 완료 후 리스너 설정
   newRef.once('value',()=>{
     startResultListener();
